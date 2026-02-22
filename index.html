@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MARVEL R&D LAB — BATCH TRACKER</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --red: #e63946;
+    --gold: #f4a261;
+    --teal: #2ec4b6;
+    --bg: #0a0a0f;
+    --panel: #111118;
+    --border: #1e1e2e;
+    --text: #e2e2f0;
+    --muted: #555570;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* ── AUTH SCREEN ── */
+  #authScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 40%, #1a0a0f 0%, #0a0a0f 70%);
+  }
+  .auth-box {
+    width: 380px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 40px 36px;
+    position: relative;
+  }
+  .auth-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--red), var(--gold), var(--teal));
+  }
+  .auth-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(230,57,70,0.4);
+    margin-bottom: 4px;
+  }
+  .auth-logo span { color: var(--gold); }
+  .auth-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+  .auth-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--teal);
+    margin-bottom: 20px;
+  }
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .form-group input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: var(--teal); box-shadow: 0 0 8px rgba(46,196,182,0.15); }
+  .auth-btn {
+    width: 100%;
+    padding: 11px;
+    background: transparent;
+    border: 1px solid var(--teal);
+    color: var(--teal);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 6px;
+  }
+  .auth-btn:hover { background: rgba(46,196,182,0.1); box-shadow: 0 0 16px rgba(46,196,182,0.2); }
+  .auth-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .auth-error {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--red);
+    margin-top: 12px;
+    min-height: 16px;
+    letter-spacing: 0.5px;
+  }
+  .auth-info {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    line-height: 1.7;
+  }
+  .auth-info span { color: var(--gold); }
+
+  /* ── MAIN APP ── */
+  #appScreen { display: none; }
+  header {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(135deg, #0a0a0f 60%, #110510);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 18px;
+    color: var(--red);
+    letter-spacing: 4px;
+    text-shadow: 0 0 20px rgba(230,57,70,0.5);
+  }
+  .logo span { color: var(--gold); }
+  .subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    margin-top: 2px;
+  }
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+  }
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--teal);
+  }
+  .user-dot { width: 7px; height: 7px; background: var(--teal); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .role-badge {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    padding: 2px 7px;
+    border: 1px solid;
+    border-radius: 2px;
+  }
+  .role-admin { color: var(--gold); border-color: var(--gold); }
+  .role-coordinator { color: var(--teal); border-color: var(--teal); }
+  .signout-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .signout-btn:hover { border-color: var(--red); color: var(--red); }
+  #clock { color: var(--muted); font-size: 10px; }
+
+  /* ── LAYOUT ── */
+  .main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: calc(100vh - 62px);
+  }
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(100vh - 62px);
+    position: sticky;
+    top: 62px;
+  }
+  .section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  input, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus { border-color: var(--teal); box-shadow: 0 0 8px rgba(46,196,182,0.15); }
+  input[type="color"] { padding: 3px 5px; height: 34px; cursor: pointer; }
+  .batch-form {
+    background: rgba(46,196,182,0.03);
+    border: 1px solid rgba(46,196,182,0.1);
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-mg { margin-bottom: 10px; }
+  .level-row {
+    display: grid;
+    grid-template-columns: 1fr 65px 26px;
+    gap: 6px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .btn {
+    background: transparent;
+    border: 1px solid;
+    color: inherit;
+    padding: 7px 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    margin-top: 6px;
+  }
+  .btn-teal { border-color: var(--teal); color: var(--teal); }
+  .btn-teal:hover { background: rgba(46,196,182,0.1); }
+  .btn-red { border-color: var(--red); color: var(--red); }
+  .btn-red:hover { background: rgba(230,57,70,0.1); }
+  .btn-gold { border-color: var(--gold); color: var(--gold); }
+  .btn-gold:hover { background: rgba(244,162,97,0.1); }
+  .btn-sm { padding: 3px 6px; font-size: 14px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; margin: 0; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Admin invite panel */
+  .invite-form {
+    background: rgba(244,162,97,0.03);
+    border: 1px solid rgba(244,162,97,0.12);
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  /* Batch list */
+  .batch-list { margin-top: 4px; }
+  .batch-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    margin-bottom: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .batch-chip:hover { border-color: var(--muted); }
+  .batch-chip .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .batch-chip .info { flex: 1; min-width: 0; }
+  .batch-chip .name { font-size: 13px; font-weight: 600; }
+  .batch-chip .meta { font-size: 10px; color: var(--muted); font-family: 'Share Tech Mono', monospace; }
+  .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 2px 5px; transition: color 0.2s; flex-shrink: 0; }
+  .del-btn:hover { color: var(--red); }
+
+  /* Sync indicator */
+  .sync-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    display: inline-block;
+    margin-right: 5px;
+  }
+  .sync-dot.syncing { background: var(--gold); animation: pulse 0.8s infinite; }
+  .sync-dot.error { background: var(--red); animation: none; }
+
+  /* Chart */
+  .chart-area { padding: 20px; overflow: auto; background: var(--bg); }
+  .chart-controls { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .chart-title { font-family: 'Orbitron', sans-serif; font-size: 13px; color: var(--text); letter-spacing: 3px; }
+  .zoom-controls { display: flex; gap: 6px; margin-left: auto; }
+  .zoom-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 12px;
+    cursor: pointer;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    transition: all 0.2s;
+  }
+  .zoom-btn.active, .zoom-btn:hover { border-color: var(--teal); color: var(--teal); }
+  #gantt-wrapper { overflow-x: auto; }
+  #gantt-svg { display: block; }
+
+  .tooltip {
+    position: fixed;
+    background: #0e0e18;
+    border: 1px solid var(--teal);
+    padding: 10px 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 9999;
+    max-width: 230px;
+    box-shadow: 0 0 20px rgba(46,196,182,0.2);
+  }
+  .tooltip.show { opacity: 1; }
+
+  .today-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+  }
+  .today-badge::before {
+    content: '';
+    width: 7px; height: 7px;
+    background: var(--gold);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .empty-state { text-align: center; padding: 80px 40px; color: var(--muted); }
+  .empty-state .icon { font-size: 44px; margin-bottom: 14px; opacity: 0.2; }
+  .empty-state p { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1px; }
+
+  .progress-summary { display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); padding: 8px 14px; flex: 1; min-width: 80px; }
+  .stat-card .val { font-family: 'Orbitron', sans-serif; font-size: 18px; color: var(--teal); }
+  .stat-card .key { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--panel);
+    border: 1px solid var(--teal);
+    padding: 10px 18px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--teal);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { border-color: var(--red); color: var(--red); }
+
+  /* Loading */
+  #loadingOverlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9000;
+    gap: 16px;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 2px solid var(--border);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loadingOverlay p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loadingOverlay">
+  <div style="font-family:'Orbitron',sans-serif;font-size:18px;color:var(--red);letter-spacing:4px;">MARVEL <span style="color:var(--gold)">R&D</span></div>
+  <div class="spinner"></div>
+  <p>INITIALIZING...</p>
+</div>
+
+<!-- Auth Screen -->
+<div id="authScreen" style="display:none">
+  <div class="auth-box">
+    <div class="auth-logo">MARVEL <span>R&D</span></div>
+    <div class="auth-sub">BATCH PROGRESS TRACKER // CLASSIFIED</div>
+    <div class="auth-title">▸ COORDINATOR LOGIN</div>
+    <div class="form-group">
+      <label>EMAIL ADDRESS</label>
+      <input type="email" id="authEmail" placeholder="coordinator@marvel-lab.com" />
+    </div>
+    <div class="form-group">
+      <label>PASSWORD</label>
+      <input type="password" id="authPassword" placeholder="••••••••••" onkeydown="if(event.key==='Enter')signIn()" />
+    </div>
+    <button class="auth-btn" onclick="signIn()" id="signInBtn">ACCESS SYSTEM</button>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-info">
+      Don't have access? Contact your <span>admin</span> to receive an invite link.
+    </div>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="appScreen">
+  <header>
+    <div>
+      <div class="logo">MARVEL <span>R&D</span></div>
+      <div class="subtitle">BATCH PROGRESS TRACKER // CLASSIFIED</div>
+    </div>
+    <div class="header-right">
+      <div id="clock"></div>
+      <div class="user-badge">
+        <div class="user-dot"></div>
+        <span id="userEmail" style="font-size:10px;"></span>
+        <span id="userRole" class="role-badge"></span>
+      </div>
+      <span id="syncStatus" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);">
+        <span class="sync-dot" id="syncDot"></span><span id="syncText">LIVE</span>
+      </span>
+      <button class="signout-btn" onclick="signOut()">SIGN OUT</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <!-- Admin: Invite Coordinator -->
+      <div id="adminPanel" style="display:none">
+        <div class="section-title">▸ INVITE COORDINATOR</div>
+        <div class="invite-form">
+          <div class="form-mg">
+            <label>EMAIL TO INVITE</label>
+            <input type="email" id="inviteEmail" placeholder="new@coordinator.com" />
+          </div>
+          <button class="btn btn-gold" onclick="inviteCoordinator()">⊕ SEND INVITE</button>
+        </div>
+      </div>
+
+      <!-- Add Batch -->
+      <div class="section-title">▸ ADD BATCH</div>
+      <div class="batch-form">
+        <div class="form-mg">
+          <label>BATCH NAME</label>
+          <input type="text" id="batchName" placeholder="e.g. Alpha-7, Cohort 3..." />
+        </div>
+        <div class="row">
+          <div class="form-mg">
+            <label>START DATE</label>
+            <input type="date" id="startDate" />
+          </div>
+          <div class="form-mg">
+            <label>COLOR</label>
+            <input type="color" id="batchColor" value="#2ec4b6" />
+          </div>
+        </div>
+        <div class="form-mg">
+          <label>LEVELS & DURATION (days)</label>
+          <div id="levelsContainer"></div>
+          <button class="btn btn-teal" onclick="addLevelField()">+ ADD LEVEL</button>
+        </div>
+        <button class="btn btn-gold" onclick="addBatch()" id="addBatchBtn" style="margin-top:8px">⊕ PLOT ON CHART</button>
+      </div>
+
+      <div class="section-title">▸ ACTIVE BATCHES</div>
+      <div id="batchList" class="batch-list">
+        <div style="padding:16px;text-align:center;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted)">LOADING...</div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-area">
+      <div class="chart-controls">
+        <div class="chart-title">TIMELINE</div>
+        <div class="today-badge">TODAY</div>
+        <div class="zoom-controls">
+          <button class="zoom-btn active" onclick="setZoom('day')" id="zoom-day">DAY</button>
+          <button class="zoom-btn" onclick="setZoom('week')" id="zoom-week">WEEK</button>
+        </div>
+      </div>
+      <div id="statsRow" class="progress-summary" style="display:none">
+        <div class="stat-card"><div class="val" id="statBatches">0</div><div class="key">BATCHES</div></div>
+        <div class="stat-card"><div class="val" id="statLevels">0</div><div class="key">TOTAL LEVELS</div></div>
+        <div class="stat-card"><div class="val" id="statActive">0</div><div class="key">IN PROGRESS</div></div>
+        <div class="stat-card"><div class="val" id="statDone">0</div><div class="key">COMPLETED</div></div>
+      </div>
+      <div id="gantt-wrapper">
+        <div class="empty-state" id="emptyState">
+          <div class="icon">⬡</div>
+          <p>ADD BATCHES FROM THE LEFT PANEL TO POPULATE THE CHART</p>
+        </div>
+        <svg id="gantt-svg"></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+<div id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIGURATION — paste your Supabase values here
+// ─────────────────────────────────────────────
+const SUPABASE_URL = 'https://qgukaozfugdyisxdepgk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFndWthb3pmdWdkeWlzeGRlcGdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3Mzc3NDgsImV4cCI6MjA4NzMxMzc0OH0.hRfK5ixB8Sc12H3NAnupmLAnCyYuwDatOcIKtzhggcE';
+const ADMIN_EMAILS = ['21varsha.shri.m@gmail.com']; // emails that have admin access
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let batches = [];
+let currentUser = null;
+let isAdmin = false;
+let zoomMode = 'day';
+let levelCount = 1;
+let realtimeChannel = null;
+
+const COLORS = ['#2ec4b6','#e63946','#f4a261','#a8dadc','#e9c46a','#8338ec','#06d6a0','#ff6b6b','#ffd166'];
+let colorIdx = 0;
+
+// ─────────────────────────────────────────────
+// CLOCK
+// ─────────────────────────────────────────────
+function updateClock() {
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toISOString().replace('T',' ').substr(0,19) + ' UTC';
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3000);
+}
+
+// ─────────────────────────────────────────────
+// SYNC STATUS
+// ─────────────────────────────────────────────
+function setSyncStatus(state) {
+  const dot = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  if (!dot) return;
+  dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
+  text.textContent = state === 'syncing' ? 'SYNCING' : state === 'error' ? 'OFFLINE' : 'LIVE';
+}
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+async function signIn() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  const btn = document.getElementById('signInBtn');
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'AUTHENTICATING...';
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false;
+  btn.textContent = 'ACCESS SYSTEM';
+
+  if (error) {
+    errEl.textContent = '⚠ ' + error.message;
+    return;
+  }
+  await initApp(data.user);
+}
+
+async function signOut() {
+  if (realtimeChannel) sb.removeChannel(realtimeChannel);
+  await sb.auth.signOut();
+  currentUser = null;
+  batches = [];
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+}
+
+// ─────────────────────────────────────────────
+// APP INIT
+// ─────────────────────────────────────────────
+async function initApp(user) {
+  currentUser = user;
+  isAdmin = ADMIN_EMAILS.includes(user.email);
+
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('userEmail').textContent = user.email;
+  document.getElementById('userRole').textContent = isAdmin ? 'ADMIN' : 'COORDINATOR';
+  document.getElementById('userRole').className = 'role-badge ' + (isAdmin ? 'role-admin' : 'role-coordinator');
+
+  if (isAdmin) document.getElementById('adminPanel').style.display = 'block';
+
+  addLevelField();
+  document.getElementById('batchColor').value = COLORS[colorIdx++ % COLORS.length];
+
+  await loadBatches();
+  subscribeRealtime();
+}
+
+// ─────────────────────────────────────────────
+// ADMIN: INVITE
+// ─────────────────────────────────────────────
+async function inviteCoordinator() {
+  const email = document.getElementById('inviteEmail').value.trim();
+  if (!email) { showToast('Enter an email to invite', true); return; }
+
+  // Use Supabase admin invite (requires service role key in a real backend)
+  // For now we use signInWithOtp as a workaround — sends a magic link
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: true, emailRedirectTo: window.location.href }
+  });
+
+  if (error) { showToast('Invite failed: ' + error.message, true); return; }
+  document.getElementById('inviteEmail').value = '';
+  showToast('✓ Invite sent to ' + email);
+}
+
+// ─────────────────────────────────────────────
+// BATCHES: LOAD
+// ─────────────────────────────────────────────
+async function loadBatches() {
+  setSyncStatus('syncing');
+  const { data, error } = await sb.from('batches').select('*').order('created_at', { ascending: true });
+  if (error) { setSyncStatus('error'); showToast('Failed to load batches', true); return; }
+  batches = (data || []).map(r => ({ ...r, startDate: new Date(r.start_date), levels: r.levels }));
+  setSyncStatus('live');
+  renderBatchList();
+  renderGantt();
+}
+
+// ─────────────────────────────────────────────
+// BATCHES: ADD
+// ─────────────────────────────────────────────
+async function addBatch() {
+  const name = document.getElementById('batchName').value.trim();
+  const startDateStr = document.getElementById('startDate').value;
+  const color = document.getElementById('batchColor').value;
+  const levels = getLevels();
+
+  if (!name) { showToast('Enter a batch name', true); return; }
+  if (!startDateStr) { showToast('Enter a start date', true); return; }
+  if (!levels.length) { showToast('Add at least one level with name & duration', true); return; }
+
+  const btn = document.getElementById('addBatchBtn');
+  btn.disabled = true;
+  setSyncStatus('syncing');
+
+  const { data, error } = await sb.from('batches').insert({
+    name,
+    start_date: startDateStr,
+    color,
+    levels,
+    created_by: currentUser.email
+  }).select().single();
+
+  btn.disabled = false;
+
+  if (error) { setSyncStatus('error'); showToast('Failed to save batch: ' + error.message, true); return; }
+
+  // Reset form
+  document.getElementById('batchName').value = '';
+  document.getElementById('startDate').value = '';
+  document.getElementById('batchColor').value = COLORS[colorIdx++ % COLORS.length];
+  document.getElementById('levelsContainer').innerHTML = '';
+  levelCount = 1;
+  addLevelField();
+
+  setSyncStatus('live');
+  showToast('✓ Batch "' + name + '" added');
+  // Realtime will update the list automatically
+}
+
+// ─────────────────────────────────────────────
+// BATCHES: DELETE
+// ─────────────────────────────────────────────
+async function removeBatch(id) {
+  if (!confirm('Remove this batch from the chart?')) return;
+  setSyncStatus('syncing');
+  const { error } = await sb.from('batches').delete().eq('id', id);
+  if (error) { setSyncStatus('error'); showToast('Failed to delete: ' + error.message, true); return; }
+  setSyncStatus('live');
+  showToast('Batch removed');
+}
+
+// ─────────────────────────────────────────────
+// REALTIME SUBSCRIPTION
+// ─────────────────────────────────────────────
+function subscribeRealtime() {
+  if (realtimeChannel) sb.removeChannel(realtimeChannel);
+  realtimeChannel = sb.channel('batches-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'batches' }, () => {
+      loadBatches();
+    })
+    .subscribe();
+}
+
+// ─────────────────────────────────────────────
+// LEVEL FIELDS
+// ─────────────────────────────────────────────
+function addLevelField(name = '', duration = '') {
+  const id = levelCount++;
+  const container = document.getElementById('levelsContainer');
+  const row = document.createElement('div');
+  row.className = 'level-row';
+  row.id = `level-${id}`;
+  row.innerHTML = `
+    <input type="text" placeholder="Level name" value="${name}" />
+    <input type="number" placeholder="Days" value="${duration}" min="1" />
+    <button class="btn btn-red btn-sm" onclick="removeLevel(${id})">×</button>
+  `;
+  container.appendChild(row);
+}
+
+function removeLevel(id) {
+  const el = document.getElementById(`level-${id}`);
+  if (el) el.remove();
+}
+
+function getLevels() {
+  const rows = document.querySelectorAll('#levelsContainer .level-row');
+  const levels = [];
+  rows.forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    const days = parseInt(inputs[1].value);
+    if (name && days > 0) levels.push({ name, days });
+  });
+  return levels;
+}
+
+// ─────────────────────────────────────────────
+// RENDER BATCH LIST
+// ─────────────────────────────────────────────
+function fmt(d) { return d instanceof Date ? d.toISOString().substr(0,10) : String(d).substr(0,10); }
+
+function renderBatchList() {
+  const el = document.getElementById('batchList');
+  if (!batches.length) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;font-family:\'Share Tech Mono\',monospace;font-size:10px;color:var(--muted)">NO BATCHES YET</div>';
+    return;
+  }
+  el.innerHTML = batches.map(b => {
+    const total = b.levels.reduce((s, l) => s + l.days, 0);
+    const end = new Date(b.startDate); end.setDate(end.getDate() + total);
+    const canDelete = isAdmin || b.created_by === currentUser.email;
+    return `
+      <div class="batch-chip">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${b.color}"></div>
+        <div class="dot" style="background:${b.color};box-shadow:0 0 6px ${b.color}"></div>
+        <div class="info">
+          <div class="name">${b.name}</div>
+          <div class="meta">${b.levels.length} LEVELS · ${total} DAYS</div>
+          <div class="meta">${fmt(b.startDate)} → ${fmt(end)}</div>
+          <div class="meta" style="color:#333345">by ${b.created_by||'unknown'}</div>
+        </div>
+        ${canDelete ? `<button class="del-btn" onclick="removeBatch('${b.id}')">×</button>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────
+// ZOOM
+// ─────────────────────────────────────────────
+function setZoom(mode) {
+  zoomMode = mode;
+  document.getElementById('zoom-day').classList.toggle('active', mode === 'day');
+  document.getElementById('zoom-week').classList.toggle('active', mode === 'week');
+  renderGantt();
+}
+
+// ─────────────────────────────────────────────
+// RENDER GANTT
+// ─────────────────────────────────────────────
+function renderGantt() {
+  const svg = document.getElementById('gantt-svg');
+  const empty = document.getElementById('emptyState');
+  const statsRow = document.getElementById('statsRow');
+  if (!batches.length) {
+    svg.style.display = 'none'; empty.style.display = 'block'; statsRow.style.display = 'none';
+    return;
+  }
+  svg.style.display = 'block'; empty.style.display = 'none'; statsRow.style.display = 'flex';
+
+  let minDate = new Date(batches[0].startDate), maxDate = new Date(batches[0].startDate);
+  batches.forEach(b => {
+    const s = new Date(b.startDate);
+    if (s < minDate) minDate = new Date(s);
+    let cur = new Date(s);
+    b.levels.forEach(l => cur.setDate(cur.getDate() + l.days));
+    if (cur > maxDate) maxDate = new Date(cur);
+  });
+  minDate.setDate(minDate.getDate() - 3);
+  maxDate.setDate(maxDate.getDate() + 5);
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const totalDays = Math.ceil((maxDate - minDate) / 86400000);
+  const cellW = zoomMode === 'day' ? 34 : 110;
+  const rowH = 52;
+  const labelW = 160;
+  const headerH = 58;
+  const totalCols = zoomMode === 'day' ? totalDays : Math.ceil(totalDays / 7);
+  const chartW = labelW + totalCols * cellW;
+  const chartH = headerH + batches.length * rowH + 16;
+
+  // Stats
+  let totalLevels = 0, activeCount = 0, doneCount = 0;
+  batches.forEach(b => {
+    totalLevels += b.levels.length;
+    const s = new Date(b.startDate);
+    let end = new Date(s);
+    b.levels.forEach(l => end.setDate(end.getDate() + l.days));
+    if (today >= s && today < end) activeCount++;
+    if (today >= end) doneCount++;
+  });
+  document.getElementById('statBatches').textContent = batches.length;
+  document.getElementById('statLevels').textContent = totalLevels;
+  document.getElementById('statActive').textContent = activeCount;
+  document.getElementById('statDone').textContent = doneCount;
+
+  svg.setAttribute('width', chartW);
+  svg.setAttribute('height', chartH);
+  svg.setAttribute('viewBox', `0 0 ${chartW} ${chartH}`);
+
+  let html = '';
+  html += `<rect width="${chartW}" height="${chartH}" fill="#0a0a0f"/>`;
+  html += `<rect x="${labelW}" y="0" width="${chartW - labelW}" height="${chartH}" fill="#0c0c14"/>`;
+  html += `<rect x="0" y="0" width="${chartW}" height="${headerH}" fill="#111118"/>`;
+
+  for (let i = 0; i < totalCols; i++) {
+    const x = labelW + i * cellW;
+    if (zoomMode === 'day') {
+      const d = new Date(minDate); d.setDate(d.getDate() + i);
+      const isToday = d.getTime() === today.getTime();
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      const isMon = d.getDay() === 1;
+      if (isWeekend) html += `<rect x="${x}" y="${headerH}" width="${cellW}" height="${chartH - headerH}" fill="rgba(0,0,0,0.15)"/>`;
+      if (isToday) {
+        html += `<rect x="${x}" y="0" width="${cellW}" height="${chartH}" fill="rgba(244,162,97,0.05)"/>`;
+        html += `<line x1="${x+cellW/2}" y1="0" x2="${x+cellW/2}" y2="${chartH}" stroke="#f4a261" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.7"/>`;
+        html += `<rect x="${x+1}" y="2" width="${cellW-2}" height="${headerH-4}" fill="rgba(244,162,97,0.18)" rx="2"/>`;
+        html += `<text x="${x+cellW/2}" y="${headerH/2-7}" text-anchor="middle" fill="#f4a261" font-family="Orbitron,sans-serif" font-size="7" letter-spacing="1">TODAY</text>`;
+        html += `<text x="${x+cellW/2}" y="${headerH/2+7}" text-anchor="middle" fill="#f4a261" font-family="Share Tech Mono,monospace" font-size="11" font-weight="bold">${d.getDate()}</text>`;
+        html += `<text x="${x+cellW/2}" y="${headerH/2+19}" text-anchor="middle" fill="rgba(244,162,97,0.7)" font-family="Share Tech Mono,monospace" font-size="8">${d.toLocaleDateString('en',{month:'short'})}</text>`;
+      } else {
+        if (isMon || i === 0) {
+          html += `<line x1="${x}" y1="${headerH/2}" x2="${x}" y2="${chartH}" stroke="#1e1e2e" stroke-width="1"/>`;
+          html += `<text x="${x+cellW/2}" y="${headerH/2-7}" text-anchor="middle" fill="#444460" font-family="Share Tech Mono,monospace" font-size="8">${d.toLocaleDateString('en',{month:'short'})}</text>`;
+        }
+        html += `<text x="${x+cellW/2}" y="${headerH/2+9}" text-anchor="middle" fill="${isWeekend?'#2a2a3a':'#404060'}" font-family="Share Tech Mono,monospace" font-size="11">${d.getDate()}</text>`;
+      }
+    } else {
+      const d = new Date(minDate); d.setDate(d.getDate() + i * 7);
+      const weekEnd = new Date(d); weekEnd.setDate(weekEnd.getDate() + 6);
+      const isCurrent = today >= d && today < new Date(d.getTime() + 7*86400000);
+      if (isCurrent) {
+        html += `<rect x="${x}" y="0" width="${cellW}" height="${chartH}" fill="rgba(244,162,97,0.04)"/>`;
+        html += `<rect x="${x+1}" y="2" width="${cellW-2}" height="${headerH-4}" fill="rgba(244,162,97,0.15)"/>`;
+        html += `<line x1="${x+cellW/2}" y1="0" x2="${x+cellW/2}" y2="${chartH}" stroke="#f4a261" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>`;
+      }
+      html += `<line x1="${x}" y1="${headerH/2}" x2="${x}" y2="${chartH}" stroke="#1e1e2e" stroke-width="1"/>`;
+      html += `<text x="${x+cellW/2}" y="${headerH/2-7}" text-anchor="middle" fill="#444460" font-family="Share Tech Mono,monospace" font-size="9">${d.toLocaleDateString('en',{month:'short'})}</text>`;
+      html += `<text x="${x+cellW/2}" y="${headerH/2+9}" text-anchor="middle" fill="${isCurrent?'#f4a261':'#404060'}" font-family="Share Tech Mono,monospace" font-size="11">${d.getDate()}–${weekEnd.getDate()}</text>`;
+    }
+  }
+
+  html += `<line x1="0" y1="${headerH}" x2="${chartW}" y2="${headerH}" stroke="#1e1e2e" stroke-width="1"/>`;
+
+  batches.forEach((b, bi) => {
+    const y = headerH + bi * rowH;
+    html += `<rect x="0" y="${y}" width="${chartW}" height="${rowH}" fill="${bi%2===0?'rgba(255,255,255,0.012)':'transparent'}"/>`;
+    html += `<line x1="0" y1="${y+rowH}" x2="${chartW}" y2="${y+rowH}" stroke="#1a1a2a" stroke-width="1"/>`;
+    html += `<rect x="0" y="${y}" width="${labelW}" height="${rowH}" fill="#111118"/>`;
+    html += `<rect x="0" y="${y+9}" width="3" height="${rowH-18}" fill="${b.color}" rx="1"/>`;
+    html += `<text x="14" y="${y+rowH/2-3}" fill="${b.color}" font-family="Rajdhani,sans-serif" font-weight="600" font-size="13">${b.name}</text>`;
+    html += `<text x="14" y="${y+rowH/2+12}" fill="#555570" font-family="Share Tech Mono,monospace" font-size="9">${b.levels.length} LEVELS</text>`;
+
+    let cur = new Date(b.startDate);
+    b.levels.forEach((lv) => {
+      const barStart = new Date(cur);
+      const barEnd = new Date(cur); barEnd.setDate(barEnd.getDate() + lv.days);
+      const dayOff = (barStart - minDate) / 86400000;
+      let bx, bw;
+      if (zoomMode === 'day') { bx = labelW + dayOff * cellW; bw = lv.days * cellW; }
+      else { bx = labelW + (dayOff / 7) * cellW; bw = (lv.days / 7) * cellW; }
+      const barY = y + 10, barH2 = rowH - 20, gap = 2, rx = 3;
+      const todayMs = today.getTime();
+      const startMs = barStart.getTime(), endMs = barEnd.getTime();
+      let status = 'pending', progress = 0;
+      if (todayMs >= endMs) { status = 'done'; progress = 1; }
+      else if (todayMs >= startMs) { status = 'active'; progress = (todayMs - startMs) / (endMs - startMs); }
+      const fw2 = Math.max(0, bw - gap * 2);
+      html += `<rect x="${bx+gap}" y="${barY}" width="${fw2}" height="${barH2}" fill="${b.color}" opacity="${status==='pending'?0.1:0.18}" rx="${rx}"/>`;
+      if (progress > 0) {
+        html += `<rect x="${bx+gap}" y="${barY}" width="${fw2 * progress}" height="${barH2}" fill="${b.color}" opacity="${status==='done'?0.75:0.9}" rx="${rx}"/>`;
+      }
+      html += `<rect x="${bx+gap}" y="${barY}" width="${fw2}" height="${barH2}" fill="none" stroke="${b.color}" stroke-width="${status==='active'?1.5:0.8}" opacity="${status==='pending'?0.25:0.7}" rx="${rx}"/>`;
+      if (status === 'active') {
+        const edgeX = bx + gap + fw2 * progress;
+        html += `<line x1="${edgeX}" y1="${barY+2}" x2="${edgeX}" y2="${barY+barH2-2}" stroke="${b.color}" stroke-width="2.5"/>`;
+        if (bw > 50) html += `<text x="${bx+gap+6}" y="${barY+barH2/2+4}" fill="white" font-family="Share Tech Mono,monospace" font-size="9">${Math.round(progress*100)}%</text>`;
+      } else if (status === 'done') {
+        html += `<text x="${bx+gap+fw2/2}" y="${barY+barH2/2+4}" text-anchor="middle" fill="rgba(255,255,255,0.85)" font-size="11">✓</text>`;
+      }
+      if (bw > 55) {
+        html += `<text x="${bx+gap+fw2/2}" y="${barY+barH2/2+4}" text-anchor="middle" fill="white" font-family="Rajdhani,sans-serif" font-size="11" font-weight="600" opacity="${status==='pending'?0.35:0.85}" style="pointer-events:none">${lv.name}</text>`;
+      }
+      const td = encodeURIComponent(JSON.stringify({ batch:b.name, level:lv.name, days:lv.days, start:fmt(barStart), end:fmt(barEnd), status, progress:Math.round(progress*100) }));
+      html += `<rect x="${bx+gap}" y="${barY}" width="${fw2}" height="${barH2}" fill="transparent" rx="${rx}" class="bar-hit" data-info="${td}" style="cursor:pointer"/>`;
+      cur = barEnd;
+    });
+  });
+
+  html += `<line x1="${labelW}" y1="0" x2="${labelW}" y2="${chartH}" stroke="#1e1e2e" stroke-width="1"/>`;
+  svg.innerHTML = html;
+
+  const tooltip = document.getElementById('tooltip');
+  svg.querySelectorAll('.bar-hit').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      const d = JSON.parse(decodeURIComponent(el.dataset.info));
+      const sc = d.status==='done'?'#2ec4b6':d.status==='active'?'#f4a261':'#555570';
+      tooltip.innerHTML = `
+        <div style="color:var(--teal);font-size:13px;margin-bottom:6px;font-family:Rajdhani,sans-serif;font-weight:600">${d.batch}</div>
+        <div style="color:#fff;margin-bottom:5px;font-size:13px">${d.level}</div>
+        <div style="color:var(--muted);margin-bottom:2px">${d.start} → ${d.end}</div>
+        <div style="color:var(--muted);margin-bottom:6px">${d.days} DAYS TOTAL</div>
+        <div style="color:${sc};font-weight:600">${d.status.toUpperCase()}${d.status==='active'?' · '+d.progress+'%':''}</div>`;
+      tooltip.classList.add('show');
+    });
+    el.addEventListener('mousemove', e => { tooltip.style.left=(e.clientX+14)+'px'; tooltip.style.top=(e.clientY-10)+'px'; });
+    el.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+  });
+}
+
+// ─────────────────────────────────────────────
+// BOOTSTRAP
+// ─────────────────────────────────────────────
+(async () => {
+  // Show error if credentials are still placeholders
+  if (SUPABASE_URL.includes('YOUR_') || SUPABASE_ANON_KEY.includes('YOUR_')) {
+    document.getElementById('loadingOverlay').innerHTML = `
+      <div style="font-family:'Orbitron',sans-serif;font-size:18px;color:var(--red);letter-spacing:4px;margin-bottom:20px;">MARVEL <span style="color:var(--gold)">R&D</span></div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--red);text-align:center;max-width:400px;line-height:2;">
+        ⚠ CONFIGURATION REQUIRED<br><br>
+        <span style="color:var(--muted)">Open <span style="color:var(--gold)">index.html</span> and replace:<br>
+        SUPABASE_URL and SUPABASE_ANON_KEY<br>
+        with your actual Supabase project values.<br><br>
+        See DEPLOY.md for instructions.</span>
+      </div>`;
+    return;
+  }
+
+  try {
+    const sessionPromise = sb.auth.getSession();
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000));
+    const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]);
+
+    document.getElementById('loadingOverlay').style.display = 'none';
+    if (session?.user) {
+      await initApp(session.user);
+    } else {
+      document.getElementById('authScreen').style.display = 'flex';
+    }
+  } catch (err) {
+    const msg = err.message === 'timeout'
+      ? 'CONNECTION TIMED OUT — Check your Supabase URL and network.'
+      : 'CONNECTION FAILED — ' + err.message;
+    document.getElementById('loadingOverlay').innerHTML = `
+      <div style="font-family:'Orbitron',sans-serif;font-size:18px;color:var(--red);letter-spacing:4px;margin-bottom:20px;">MARVEL <span style="color:var(--gold)">R&D</span></div>
+      <div style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--red);text-align:center;max-width:420px;line-height:2;">
+        ⚠ ${msg}<br><br>
+        <span style="color:var(--muted)">1. Check SUPABASE_URL is correct<br>
+        2. Check SUPABASE_ANON_KEY is correct<br>
+        3. Check your Supabase project is active<br><br>
+        See DEPLOY.md for help.</span><br><br>
+        <button onclick="location.reload()" style="background:transparent;border:1px solid var(--teal);color:var(--teal);padding:8px 20px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:2px;cursor:pointer;">RETRY</button>
+      </div>`;
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user && !currentUser) {
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('loadingOverlay').style.display = 'none';
+      await initApp(session.user);
+    }
+  });
+})();
+</script>
+</body>
+</html>
